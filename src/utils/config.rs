@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use rsa::RsaPublicKey;
-use rsa::pkcs1::DecodeRsaPublicKey;
 use std::fs;
+use rsa::pkcs8::DecodePublicKey;
 use toml::Value;
 
 #[derive(Debug)]
@@ -21,7 +21,7 @@ impl Config {
                 let id_autoridade: u32 = id_str.parse().expect("ID da autoridade inválido");
                 let chave_pem = chave_pem.as_str().expect("Chave PEM inválida");
 
-                let chave_publica = RsaPublicKey::from_pkcs1_pem(chave_pem)
+                let chave_publica = RsaPublicKey::from_public_key_pem(chave_pem)
                     .expect("Erro ao carregar chave pública da autoridade");
 
                 chaves_publicas.insert(id_autoridade, chave_publica);

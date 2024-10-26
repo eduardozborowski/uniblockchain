@@ -27,12 +27,13 @@ impl Bloco {
         indice: u32,
         hash_anterior: String,
         transacoes: Vec<Transacao>,
+        timestamp: Option<DateTime<Utc>>,
     ) -> Self {
         Bloco {
             indice,
             hash_anterior,
             hash_atual: String::new(),
-            timestamp: Utc::now(),
+            timestamp: timestamp.unwrap_or_else(|| Utc::now()),
             transacoes,
             id_autoridade: 0,
             assinatura_autoridade: String::new(),

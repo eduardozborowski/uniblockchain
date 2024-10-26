@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use crate::utils::config::Config;
 use crate::utils::erros::BlocoErro;
 use rsa::RsaPrivateKey;
-use chrono::Utc;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::fs::{File, OpenOptions};
 use std::io::{Write, Read};
@@ -18,7 +18,13 @@ pub struct Blockchain {
 
 impl Blockchain {
     pub fn nova_blockchain() -> Self {
-        let bloco_genesis = Bloco::novo_bloco(0, String::from("0"), Vec::new());
+        let timestamp_genesis = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp_opt(0, 0).unwrap(), Utc);
+        let bloco_genesis = Bloco::novo_bloco(
+            0,
+            String::from("0"),
+            Vec::new(),
+            Some(timestamp_genesis),
+        );
         let mut blockchain = Blockchain {
             cadeia: vec![bloco_genesis],
             transacoes_pendentes: VecDeque::new(),

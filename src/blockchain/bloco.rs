@@ -1,8 +1,7 @@
-// src\blockchain\bloco.rs
 use base64::{decode, encode};
 use chrono::{DateTime, Utc};
 use rsa::pkcs1v15::{SigningKey, VerifyingKey, Signature as RsaSignature};
-use rsa::RsaPrivateKey;
+use rsa::{RsaPrivateKey, RsaPublicKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Digest};
 use signature::{Signer, Verifier};
@@ -89,7 +88,7 @@ impl Bloco {
         let assinatura_bytes = decode(&self.assinatura_autoridade).map_err(|_| BlocoErro::AssinaturaInvalida)?;
         let assinatura = RsaSignature::from(assinatura_bytes.into_boxed_slice());
 
-        let verifying_key = VerifyingKey::<Sha256>::new(chave_publica);
+        let verifying_key = VerifyingKey::<Sha256>::new(chave_publica.clone());
 
         verifying_key
             .verify(dados_assinados.as_bytes(), &assinatura)

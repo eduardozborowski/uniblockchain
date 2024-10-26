@@ -3646,6 +3646,7 @@ dependencies = [
  "signature 2.2.0",
  "thiserror",
  "tokio",
+ "toml 0.8.19",
 ]
 
 [[package]]

@@ -7,14 +7,24 @@ use blockchain::{Blockchain, Estudante, PeriodoLetivo, Transacao};
 use rede::{iniciar_rede, P2PEvent};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use criptografia::chaves::gerar_chave_privada_autoridade;
+use criptografia::chaves::carregar_chave_privada;
 use tokio::io::{self, AsyncBufReadExt};
 
 #[tokio::main]
 async fn main() {
     let config = utils::config::Config::carregar_configuracao();
-    let chave_privada_autoridade = gerar_chave_privada_autoridade();
-    let id_autoridade = 1;
+    println!("Chaves públicas carregadas: {:?}", config.chaves_publicas.keys());
+
+    // Determina se o nó é autoridade com base no argumento de linha de comando
+    let is_autoridade = std::env::args().any(|arg| arg == "--autoridade");
+    let id_autoridade = if is_autoridade { 1 } else { 0 };
+
+    // Carrega a chave privada somente se for autoridade
+    let chave_privada_autoridade = if is_autoridade {
+        Some(carregar_chave_privada(id_autoridade))
+    } else {
+        None
+    };
 
     let blockchain = Arc::new(Mutex::new(Blockchain::nova_blockchain()));
     let mut p2p_swarm = iniciar_rede().await;
@@ -93,16 +103,20 @@ async fn main() {
                         println!("Transação criada e difundida.\nDigite o próximo comando:");
                     }
                     "criar_bloco" => {
-                        println!("Criando bloco...");
-                        let novo_bloco = {
-                            let mut bc = blockchain.lock().await;
-                            bc.criar_e_adicionar_bloco(
-                                &chave_privada_autoridade,
-                                id_autoridade,
-                            )
-                        };
-                        p2p_swarm.difundir_bloco(&novo_bloco);
-                        println!("Bloco criado e difundido.");
+                        if let Some(chave_privada) = &chave_privada_autoridade {
+                            println!("Criando bloco...");
+                            let novo_bloco = {
+                                let mut bc = blockchain.lock().await;
+                                bc.criar_e_adicionar_bloco(
+                                    chave_privada,
+                                    id_autoridade,
+                                )
+                            };
+                            p2p_swarm.difundir_bloco(&novo_bloco);
+                            println!("Bloco criado e difundido.");
+                        } else {
+                            println!("Este nó não é autoridade e não pode criar blocos.");
+                        }
                     }
                     _ => println!("Comando desconhecido. Tente 'transacao' ou 'criar_bloco'."),
                 }

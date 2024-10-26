@@ -1,42 +1,37 @@
-// src/utils/config.rs
-
-use serde::{Serialize, Deserialize};
-use std::fs;
+use std::collections::HashMap;
 use rsa::RsaPublicKey;
 use rsa::pkcs1::DecodeRsaPublicKey;
+use std::fs;
+use toml::Value;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Autoridade {
-    pub id: u32,
-    pub nome: String,
-    pub chave_publica_pem: String,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Config {
-    pub autoridades: Vec<Autoridade>,
+    pub chaves_publicas: HashMap<u32, RsaPublicKey>,
 }
 
 impl Config {
     pub fn carregar_configuracao() -> Self {
-        // Carrega a configuração de um arquivo JSON ou inicializa manualmente
-        // Exemplo simplificado:
-        let autoridades = vec![
-            Autoridade {
-                id: 1,
-                nome: "Autoridade1".to_string(),
-                chave_publica_pem: fs::read_to_string("chaves_publicas/autoridade_1.pem").expect("Falha ao carregar chave pública"),
-            },
-            // Adicione outras autoridades conforme necessário
-        ];
+        let conteudo = fs::read_to_string("config.toml").expect("Não foi possível ler o arquivo config.toml");
+        let value = conteudo.parse::<Value>().expect("Erro ao parsear o arquivo config.toml");
 
-        Config { autoridades }
+        let mut chaves_publicas = HashMap::new();
+
+        if let Some(autoridades) = value.get("autoridades").and_then(|v| v.as_table()) {
+            for (id_str, chave_pem) in autoridades {
+                let id_autoridade: u32 = id_str.parse().expect("ID da autoridade inválido");
+                let chave_pem = chave_pem.as_str().expect("Chave PEM inválida");
+
+                let chave_publica = RsaPublicKey::from_pkcs1_pem(chave_pem)
+                    .expect("Erro ao carregar chave pública da autoridade");
+
+                chaves_publicas.insert(id_autoridade, chave_publica);
+            }
+        }
+
+        Config { chaves_publicas }
     }
 
-    pub fn obter_chave_publica(&self, id: u32) -> Option<RsaPublicKey> {
-        self.autoridades
-            .iter()
-            .find(|auth| auth.id == id)
-            .and_then(|auth| RsaPublicKey::from_pkcs1_pem(&auth.chave_publica_pem).ok())
+    pub fn obter_chave_publica(&self, id_autoridade: u32) -> Option<&RsaPublicKey> {
+        self.chaves_publicas.get(&id_autoridade)
     }
 }

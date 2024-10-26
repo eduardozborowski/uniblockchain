@@ -1,10 +1,9 @@
-// src\blockchain\blockchain.rs
 use super::{Bloco, Transacao};
 use std::collections::VecDeque;
 use crate::utils::config::Config;
 use crate::utils::erros::BlocoErro;
 use rsa::RsaPrivateKey;
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{Utc, TimeZone};
 use serde::{Serialize, Deserialize};
 use std::fs::{File, OpenOptions};
 use std::io::{Write, Read};
@@ -18,7 +17,7 @@ pub struct Blockchain {
 
 impl Blockchain {
     pub fn nova_blockchain() -> Self {
-        let timestamp_genesis = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp_opt(0, 0).unwrap(), Utc);
+        let timestamp_genesis = Utc.timestamp_opt(0, 0).unwrap();
         let bloco_genesis = Bloco::novo_bloco(
             0,
             String::from("0"),
@@ -75,29 +74,6 @@ impl Blockchain {
         Ok(())
     }
 
-    pub fn validar_blockchain(&self, config: &Config) -> bool {
-        for i in 1..self.cadeia.len() {
-            let bloco_atual = &self.cadeia[i];
-            let bloco_anterior = &self.cadeia[i - 1];
-
-            if bloco_atual.hash_anterior != bloco_anterior.hash_atual {
-                println!("Hash anterior incorreto no bloco {}", i);
-                return false;
-            }
-
-            if bloco_atual.hash_atual != bloco_atual.calcular_hash() {
-                println!("Hash atual inválido no bloco {}", i);
-                return false;
-            }
-
-            if let Err(e) = bloco_atual.verificar_assinatura(config) {
-                println!("Assinatura inválida no bloco {}: {:?}", i, e);
-                return false;
-            }
-        }
-        true
-    }
-
     pub fn salvar_em_disco(&self, caminho: &str) -> std::io::Result<()> {
         let dados = serde_json::to_string(&self).unwrap();
         let mut arquivo = OpenOptions::new()
@@ -116,28 +92,5 @@ impl Blockchain {
         let mut blockchain: Blockchain = serde_json::from_str(&dados).unwrap();
         blockchain.transacoes_pendentes = VecDeque::new();
         Ok(blockchain)
-    }
-
-    pub fn validar_cadeia(cadeia: &Vec<Bloco>, config: &Config) -> bool {
-        for i in 1..cadeia.len() {
-            let bloco_atual = &cadeia[i];
-            let bloco_anterior = &cadeia[i - 1];
-
-            if bloco_atual.hash_anterior != bloco_anterior.hash_atual {
-                println!("Hash anterior incorreto no bloco {}", i);
-                return false;
-            }
-
-            if bloco_atual.hash_atual != bloco_atual.calcular_hash() {
-                println!("Hash atual inválido no bloco {}", i);
-                return false;
-            }
-
-            if let Err(e) = bloco_atual.verificar_assinatura(config) {
-                println!("Assinatura inválida no bloco {}: {:?}", i, e);
-                return false;
-            }
-        }
-        true
     }
 }

@@ -1,1 +1,35 @@
-/target
+# Artefatos de build do Rust
+/target/
+**/*.rs.bk
+
+# Arquivos de configuração que podem conter informações sensíveis
+config.toml
+config/*.toml
+
+# Diretório contendo chaves privadas (NÃO COMMITAR)
+/chaves_privadas/
+
+# Arquivos de dados da blockchain (se persistidos em disco)
+blockchain.json
+
+# Arquivos temporários ou de backup
+*.tmp
+*.log
+*.swp
+*.bak
+
+# Arquivos específicos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Diretórios e arquivos de ambientes de desenvolvimento
+# Para Visual Studio Code
+.vscode/
+# Para IntelliJ IDEA, CLion ou outros IDEs da JetBrains
+.idea/
+
+# Arquivos específicos do Rust
+Cargo.lock
+
+# Outros arquivos que você não quer enviar
+# (Adicione aqui quaisquer outros arquivos ou diretórios que deseja ignorar)

@@ -22,4 +22,8 @@ impl Estudante {
             periodos_letivos: Vec::new(),
         }
     }
+
+    pub fn adicionar_periodo_letivo(&mut self, periodo: PeriodoLetivo) {
+        self.periodos_letivos.push(periodo);
+    }
 }

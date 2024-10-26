@@ -26,13 +26,19 @@ async fn main() {
         None
     };
 
-    let blockchain = Arc::new(Mutex::new(Blockchain::nova_blockchain()));
+    // Carrega ou inicializa a blockchain
+    let blockchain = if let Ok(bc) = Blockchain::carregar_do_disco("blockchain.json") {
+        Arc::new(Mutex::new(bc))
+    } else {
+        Arc::new(Mutex::new(Blockchain::nova_blockchain()))
+    };
+
     let mut p2p_swarm = iniciar_rede().await;
 
     let stdin = io::BufReader::new(tokio::io::stdin());
     let mut stdin_lines = stdin.lines();
 
-    println!("Digite o comando (ex: 'transacao' ou 'criar_bloco'):");
+    println!("Digite o comando (ex: 'transacao', 'criar_bloco' ou 'exibir_blockchain'):");
 
     loop {
         tokio::select! {
@@ -44,6 +50,11 @@ async fn main() {
                             let mut bc = blockchain.lock().await;
                             if let Err(e) = bc.adicionar_bloco_externo(bloco_recebido, &config) {
                                 println!("Erro ao adicionar bloco externo: {:?}", e);
+                            } else {
+                                // Salva a blockchain após adicionar o bloco
+                                if let Err(e) = bc.salvar_em_disco("blockchain.json") {
+                                    println!("Erro ao salvar a blockchain: {:?}", e);
+                                }
                             }
                         }
                         P2PEvent::NovaTransacao(transacao_recebida) => {
@@ -76,7 +87,7 @@ async fn main() {
                         println!("Digite o semestre do período letivo:");
                         let semestre = ler_u8_async(&mut stdin_lines).await;
 
-                        let estudante = Estudante::novo_estudante(
+                        let mut estudante = Estudante::novo_estudante(
                             id_estudante,
                             &nome_estudante,
                             ano_nascimento,
@@ -88,6 +99,10 @@ async fn main() {
                             ano_periodo,
                             semestre,
                         );
+
+                        // Adiciona o período letivo ao estudante
+                        estudante.adicionar_periodo_letivo(periodo_letivo.clone());
+
                         let transacao = Transacao::nova_transacao(
                             id_transacao,
                             estudante,
@@ -107,10 +122,16 @@ async fn main() {
                             println!("Criando bloco...");
                             let novo_bloco = {
                                 let mut bc = blockchain.lock().await;
-                                bc.criar_e_adicionar_bloco(
+                                let bloco = bc.criar_e_adicionar_bloco(
                                     chave_privada,
                                     id_autoridade,
-                                )
+                                );
+
+                                // Salva a blockchain após criar o bloco
+                                if let Err(e) = bc.salvar_em_disco("blockchain.json") {
+                                    println!("Erro ao salvar a blockchain: {:?}", e);
+                                }
+                                bloco
                             };
                             p2p_swarm.difundir_bloco(&novo_bloco);
                             println!("Bloco criado e difundido.");
@@ -118,7 +139,14 @@ async fn main() {
                             println!("Este nó não é autoridade e não pode criar blocos.");
                         }
                     }
-                    _ => println!("Comando desconhecido. Tente 'transacao' ou 'criar_bloco'."),
+                    "exibir_blockchain" => {
+                        let bc = blockchain.lock().await;
+                        println!("Blockchain atual:");
+                        for bloco in &bc.cadeia {
+                            println!("{:#?}", bloco);
+                        }
+                    }
+                    _ => println!("Comando desconhecido. Tente 'transacao', 'criar_bloco' ou 'exibir_blockchain'."),
                 }
             }
             else => {

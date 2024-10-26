@@ -1,13 +1,14 @@
 use base64::{decode, encode};
 use chrono::{DateTime, Utc};
-use rsa::pkcs1v15::{SigningKey, VerifyingKey, Signature as RsaSignature};
-use rsa::{RsaPrivateKey, RsaPublicKey};
+use rsa::pkcs1v15::{Signature as RsaSignature, SigningKey, VerifyingKey};
+use rsa::RsaPrivateKey;
 use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use signature::{Signer, Verifier};
 
 use crate::utils::config::Config;
 use crate::utils::erros::BlocoErro;
+
 use super::Transacao;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

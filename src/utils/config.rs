@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use rsa::RsaPublicKey;
+use rsa::pkcs8::DecodePublicKey; // Import necessário para from_public_key_pem
 use std::fs;
-use rsa::pkcs8::DecodePublicKey;
 use toml::Value;
 
 #[derive(Debug)]

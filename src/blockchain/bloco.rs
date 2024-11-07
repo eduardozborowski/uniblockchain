@@ -42,7 +42,7 @@ impl Bloco {
 
     pub fn calcular_hash(&self) -> String {
         let mut bloco_clone = self.clone();
-        bloco_clone.hash_atual = String::new(); // Evitar loop infinito
+        bloco_clone.hash_atual = String::new();
         let bloco_serializado = serde_json::to_string(&bloco_clone).unwrap();
         let mut hasher = Sha256::new();
         hasher.update(bloco_serializado.as_bytes());

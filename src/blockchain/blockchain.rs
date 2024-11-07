@@ -85,12 +85,16 @@ impl Blockchain {
         Ok(())
     }
 
-    pub fn carregar_do_disco(caminho: &str) -> std::io::Result<Self> {
+    pub fn carregar_do_disco(caminho: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let mut arquivo = File::open(caminho)?;
         let mut dados = String::new();
         arquivo.read_to_string(&mut dados)?;
-        let mut blockchain: Blockchain = serde_json::from_str(&dados).unwrap();
-        blockchain.transacoes_pendentes = VecDeque::new();
-        Ok(blockchain)
+        if dados.trim().is_empty() {
+            Err("Arquivo de blockchain vazio".into())
+        } else {
+            let mut blockchain: Blockchain = serde_json::from_str(&dados)?;
+            blockchain.transacoes_pendentes = VecDeque::new();
+            Ok(blockchain)
+        }
     }
 }

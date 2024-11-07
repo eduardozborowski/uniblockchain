@@ -1,7 +1,6 @@
-// src/criptografia/chaves.rs
 
 use rsa::RsaPrivateKey;
-use rsa::pkcs8::DecodePrivateKey; // Import necessário para `from_pkcs8_pem`
+use rsa::pkcs8::DecodePrivateKey;
 use std::fs;
 
 pub fn carregar_chave_privada(id_autoridade: u32) -> RsaPrivateKey {

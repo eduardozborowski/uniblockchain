@@ -1,4 +1,3 @@
-// src/blockchain/estudante.rs
 
 use serde::{Serialize, Deserialize};
 use chrono::NaiveDate;

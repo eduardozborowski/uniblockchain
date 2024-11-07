@@ -1,4 +1,3 @@
-// src\blockchain\periodo_letivo.rs
 use serde::{Serialize, Deserialize};
 
 use super::Disciplina;
@@ -19,5 +18,9 @@ impl PeriodoLetivo {
             semestre,
             disciplinas: Vec::new(),
         }
+    }
+
+    pub fn adicionar_disciplina(&mut self, disciplina: Disciplina) {
+        self.disciplinas.push(disciplina);
     }
 }

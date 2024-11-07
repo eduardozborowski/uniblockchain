@@ -3,7 +3,7 @@ mod rede;
 mod criptografia;
 mod utils;
 
-use blockchain::{Blockchain, Estudante, PeriodoLetivo, Transacao};
+use blockchain::{Blockchain, Estudante, PeriodoLetivo, Transacao, Disciplina, Nota};
 use rede::{iniciar_rede, P2PEvent};
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -27,13 +27,24 @@ async fn main() {
     };
 
     // Carrega ou inicializa a blockchain
-    let blockchain = if let Ok(bc) = Blockchain::carregar_do_disco("blockchain.json") {
-        Arc::new(Mutex::new(bc))
-    } else {
-        Arc::new(Mutex::new(Blockchain::nova_blockchain()))
+    let blockchain = match Blockchain::carregar_do_disco("blockchain.json") {
+        Ok(bc) => Arc::new(Mutex::new(bc)),
+        Err(e) => {
+            println!("Erro ao carregar a blockchain local: {:?}.", e);
+            println!("Inicializando uma blockchain vazia e solicitando atualização da rede...");
+            Arc::new(Mutex::new(Blockchain::nova_blockchain()))
+        }
     };
 
-    let mut p2p_swarm = iniciar_rede().await;
+    let mut p2p_swarm = iniciar_rede(blockchain.clone()).await;
+
+    // Se a blockchain foi inicializada vazia, solicita atualização da rede
+    {
+        let bc = blockchain.lock().await;
+        if bc.cadeia.len() <= 1 {
+            p2p_swarm.solicitar_blockchain();
+        }
+    }
 
     let stdin = io::BufReader::new(tokio::io::stdin());
     let mut stdin_lines = stdin.lines();
@@ -61,6 +72,24 @@ async fn main() {
                             println!("Transação recebida: {:?}", transacao_recebida);
                             let mut bc = blockchain.lock().await;
                             bc.adicionar_transacao(transacao_recebida);
+                        }
+                        P2PEvent::BlockchainSolicitada { peer, channel } => {
+                            println!("Nó {} solicitou a blockchain.", peer);
+                            let bc = blockchain.lock().await;
+                            p2p_swarm.enviar_blockchain(&bc.cadeia, channel);
+                        }
+                        P2PEvent::BlockchainRecebida(cadeia_recebida) => {
+                            println!("Blockchain recebida da rede.");
+                            let mut bc = blockchain.lock().await;
+                            if bc.cadeia.len() < cadeia_recebida.len() {
+                                bc.cadeia = cadeia_recebida;
+                                // Salva a blockchain após receber
+                                if let Err(e) = bc.salvar_em_disco("blockchain.json") {
+                                    println!("Erro ao salvar a blockchain: {:?}", e);
+                                }
+                            } else {
+                                println!("A blockchain local já está atualizada.");
+                            }
                         }
                     }
                 }
@@ -94,11 +123,88 @@ async fn main() {
                             mes_nascimento,
                             dia_nascimento,
                         );
-                        let periodo_letivo = PeriodoLetivo::novo_periodo(
+                        let mut periodo_letivo = PeriodoLetivo::novo_periodo(
                             id_transacao,
                             ano_periodo,
                             semestre,
                         );
+
+                        // Pergunta se o usuário deseja adicionar disciplinas
+                        println!("Deseja adicionar disciplinas ao período letivo? (s/n):");
+                        let adicionar_disciplinas = ler_string_async(&mut stdin_lines).await;
+
+                        if adicionar_disciplinas.eq_ignore_ascii_case("s") {
+                            loop {
+                                println!("Digite o ID da disciplina:");
+                                let id_disciplina = ler_u32_async(&mut stdin_lines).await;
+
+                                println!("Digite o nome da disciplina:");
+                                let nome_disciplina = ler_string_async(&mut stdin_lines).await;
+
+                                println!("Digite o código da disciplina:");
+                                let codigo_disciplina = ler_string_async(&mut stdin_lines).await;
+
+                                let mut disciplina = Disciplina::nova_disciplina(
+                                    id_disciplina,
+                                    &nome_disciplina,
+                                    &codigo_disciplina,
+                                );
+
+                                // Pergunta se o usuário deseja adicionar notas à disciplina
+                                println!("Deseja adicionar notas à disciplina? (s/n):");
+                                let adicionar_notas = ler_string_async(&mut stdin_lines).await;
+
+                                if adicionar_notas.eq_ignore_ascii_case("s") {
+                                    loop {
+                                        println!("Digite o ID da nota:");
+                                        let id_nota = ler_u32_async(&mut stdin_lines).await;
+
+                                        println!("Digite o valor da nota:");
+                                        let valor_nota = ler_f32_async(&mut stdin_lines).await;
+
+                                        println!("Digite o tipo da nota (ex: Prova, Trabalho):");
+                                        let tipo_nota = ler_string_async(&mut stdin_lines).await;
+
+                                        println!("Digite o ano da nota:");
+                                        let ano_nota = ler_i32_async(&mut stdin_lines).await;
+
+                                        println!("Digite o mês da nota:");
+                                        let mes_nota = ler_u32_async(&mut stdin_lines).await;
+
+                                        println!("Digite o dia da nota:");
+                                        let dia_nota = ler_u32_async(&mut stdin_lines).await;
+
+                                        // Cria uma nova nota
+                                        let nota = Nota::nova_nota(
+                                            id_nota,
+                                            valor_nota,
+                                            &tipo_nota,
+                                            ano_nota,
+                                            mes_nota,
+                                            dia_nota,
+                                        );
+
+                                        // Adiciona a nota à disciplina
+                                        disciplina.adicionar_nota(nota);
+
+                                        println!("Deseja adicionar outra nota? (s/n):");
+                                        let continuar_notas = ler_string_async(&mut stdin_lines).await;
+                                        if continuar_notas.eq_ignore_ascii_case("n") {
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Adiciona a disciplina ao período letivo
+                                periodo_letivo.adicionar_disciplina(disciplina);
+
+                                println!("Deseja adicionar outra disciplina? (s/n):");
+                                let continuar_disciplinas = ler_string_async(&mut stdin_lines).await;
+                                if continuar_disciplinas.eq_ignore_ascii_case("n") {
+                                    break;
+                                }
+                            }
+                        }
 
                         // Adiciona o período letivo ao estudante
                         estudante.adicionar_periodo_letivo(periodo_letivo.clone());
@@ -194,6 +300,22 @@ async fn ler_u8_async(
     loop {
         if let Ok(Some(line)) = stdin_lines.next_line().await {
             if let Ok(value) = line.trim().parse::<u8>() {
+                return value;
+            } else {
+                println!("Valor inválido, por favor digite um número válido:");
+            }
+        } else {
+            println!("Erro ao ler entrada.");
+        }
+    }
+}
+
+async fn ler_f32_async(
+    stdin_lines: &mut tokio::io::Lines<tokio::io::BufReader<tokio::io::Stdin>>,
+) -> f32 {
+    loop {
+        if let Ok(Some(line)) = stdin_lines.next_line().await {
+            if let Ok(value) = line.trim().parse::<f32>() {
                 return value;
             } else {
                 println!("Valor inválido, por favor digite um número válido:");

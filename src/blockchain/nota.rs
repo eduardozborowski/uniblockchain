@@ -1,4 +1,3 @@
-// src/blockchain/nota.rs
 
 use serde::{Serialize, Deserialize};
 use chrono::NaiveDate;

@@ -1,4 +1,3 @@
-// src\blockchain\disciplina.rs
 use serde::{Serialize, Deserialize};
 
 use super::Nota;
@@ -23,5 +22,9 @@ impl Disciplina {
             media: 0.0,
             frequencia: 0.0,
         }
+    }
+
+    pub fn adicionar_nota(&mut self, nota: Nota) {
+        self.notas.push(nota);
     }
 }

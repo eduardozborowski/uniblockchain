@@ -1,4 +1,3 @@
-// src/utils/erros.rs
 
 use thiserror::Error;
 

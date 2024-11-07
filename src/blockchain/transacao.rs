@@ -1,4 +1,3 @@
-// src\blockchain\transacao.rs
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 

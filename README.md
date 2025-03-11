@@ -1,6 +1,7 @@
 # UniBlockchain
 
 An educational blockchain implementation for managing student records, built with 🦀 **Rust**.
+![Untitled](https://github.com/user-attachments/assets/33bd36ab-3680-4cd1-bf1b-e04009c5e8d3)
 
 ---
 
